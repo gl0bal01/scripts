@@ -1,0 +1,156 @@
+#!/bin/bash
+
+# Convert dotted quad IP to decimal
+ip2dec() {
+    local IFS='.'
+    local ip=($1)
+    printf "%d" $(( (${ip[0]} << 24) + (${ip[1]} << 16) + (${ip[2]} << 8) + ${ip[3]} ))
+}
+
+# Convert decimal to dotted quad IP
+dec2ip() {
+    printf "%d.%d.%d.%d" $(($1>>24&255)) $(($1>>16&255)) $(($1>>8&255)) $(($1&255))
+}
+
+# Convert IP range to CIDR
+range2cidr() {
+    local start_ip=$1
+    local end_ip=$2
+    local start_dec=$(ip2dec "$start_ip")
+    local end_dec=$(ip2dec "$end_ip")
+    local result=""
+
+    while [ $start_dec -le $end_dec ]; do
+        local bits=32
+        local mask=$((0xffffffff))
+
+        while [ $bits -gt 0 ] && [ $(($start_dec | $((~mask & 0xffffffff)))) -le $end_dec ]; do
+            mask=$((mask << 1))
+            ((bits--))
+        done
+
+        result+="$(dec2ip $start_dec)/$bits"$'\n'
+        start_dec=$(($start_dec + (1 << (32-bits))))
+        
+        [ $start_dec -le $end_dec ] && result+=$'\n'
+    done
+
+    echo "$result"
+}
+
+# Sanitize IP address
+sanitize_ip() {
+    local IFS='.'
+    local ip=($1)
+    echo "${ip[0]:-0}.${ip[1]:-0}.${ip[2]:-0}.${ip[3]:-0}"
+}
+
+# Process input
+process_input() {
+    local start_ip end_ip
+
+    while IFS=' -:' read -r start_ip end_ip _; do
+        [[ $start_ip == \#* ]] && continue
+        [ -z "$start_ip" ] || [ -z "$end_ip" ] && continue
+        start_ip=$(sanitize_ip "$start_ip")
+        end_ip=$(sanitize_ip "$end_ip")
+        range2cidr "$start_ip" "$end_ip"
+    done
+}
+
+# Print help information
+print_help() {
+    cat << EOF
+ip2cidr - Convert IP ranges to CIDR notation
+
+Usage: ip2cidr [OPTIONS] [FILE]
+
+Options:
+  -h, --help     Display this help message and exit
+  -v, --version  Display version information and exit
+
+If FILE is not provided, the script reads from standard input.
+
+Input Format:
+  Each line should contain an IP range in one of these formats:
+    - start_ip - end_ip
+    - start_ip-end_ip
+    - start_ip:end_ip
+
+Examples:
+  1. Process a file:
+     ip2cidr input_file.txt
+
+  2. Use with a pipe:
+     echo "192.168.0.1 - 192.168.0.50" | ip2cidr
+
+  3. Use with here-document:
+     ip2cidr << EOF
+     10.0.0.0 - 10.0.0.50
+     172.16.0.0-172.16.0.100
+     192.168.1.1:192.168.1.10
+     EOF
+
+  4. Redirect input from a file:
+     ip2cidr < input_file.txt
+
+  5. Redirect output to a file:
+     ip2cidr input_file.txt > output_file.txt
+
+Notes:
+  - Lines starting with '#' are treated as comments and ignored.
+  - Empty lines are ignored.
+  - IP addresses can be entered with or without leading zeros.
+
+EOF
+}
+
+# Print version information
+print_version() {
+    echo "ip2cidr version 1.0 - global01"
+}
+
+# Main script logic
+main() {
+    # If no arguments are provided, print help and exit
+    if [[ $# -eq 0 ]] && [ -t 0 ]; then
+        print_help
+        exit 0
+    fi
+
+    # Parse command-line options
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                print_help
+                exit 0
+                ;;
+            -v|--version)
+                print_version
+                exit 0
+                ;;
+            *)
+                break
+                ;;
+        esac
+        shift
+    done
+
+    # Check if input file is provided
+    if [[ $# -eq 1 ]]; then
+        if [[ ! -f "$1" ]]; then
+            echo "Error: File '$1' not found." >&2
+            exit 1
+        fi
+        process_input < "$1"
+    elif [[ $# -gt 1 ]]; then
+        echo "Error: Too many arguments." >&2
+        print_help
+        exit 1
+    else
+        process_input
+    fi
+}
+
+# Run the main function
+main "$@"
