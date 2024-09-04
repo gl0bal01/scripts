@@ -15,11 +15,6 @@ if (!file_exists($wp_load_path)) {
 }
 require_once($wp_load_path);
 
-// Verify user has necessary capabilities
-if (!current_user_can('manage_options')) {
-    die("You don't have sufficient permissions to run this script.");
-}
-
 // Display warning and get confirmation
 echo "WARNING: This script will remove specific links from published WordPress posts." . PHP_EOL;
 echo "Make sure you have a backup of your database before proceeding." . PHP_EOL;
