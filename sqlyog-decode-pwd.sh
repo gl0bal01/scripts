@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# gl0bal01 - SQLyog Password Decoder Script
+# -----------------------------------------
+# Description:
+# This script decodes encrypted SQLyog passwords stored in configuration files. 
+# It is useful for recovering passwords from SQLyog configuration files when you have forgotten them.
+#
+# Example usage:
+# ./sqlyog-decode-pwd.sh 5f4dcc3b5aa765d61d8327deb882cf99
+# Output: decoded_password
+
 # Function to display usage information
 usage() {
     echo "Usage: $0 encrypted_password"
