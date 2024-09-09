@@ -2,8 +2,8 @@
 declare(strict_types=1);
 
 /**
+ * gl0bal01 - Random Picker Script
  * Generate a random integer within a specified range.
- *
  * @param int $min The minimum value (inclusive)
  * @param int $max The maximum value (inclusive)
  * @return int The random integer
