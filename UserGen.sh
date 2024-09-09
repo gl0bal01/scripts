@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# gl0bal01 - Username Generator Script
+# ------------------------------------
+# Description:
+# This script generates various username combinations based on the provided first name and last name.
+# Optionally, the user can provide a list of separators (e.g., '_', '-', '.') to create more combinations.
+# If no separators are provided, the default separator is a period ('.').
+
 if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
     echo "Usage: $0 <first_name> <last_name> [separator_list]"
     echo "Example: $0 John Doe _,-,."
