@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# gl0bal01 - URL Redirect Checker Script
+# --------------------------------------
+# Description:
+# This script checks if a given URL leads to a redirect, and if so, it traces the chain until final destination URL.
+# It is useful for verifying if URLs redirect to expected locations and identifying any potential malicious redirects.
+
 # Set strict mode
 set -euo pipefail
 
