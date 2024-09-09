@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# gl0bal01 - Random Picker Script
+# -------------------------------
+# Description:
+# This script randomly selects an item from a list of items provided as input.
+# It is useful for scenarios where you need to make a random choice from multiple options.
+
 # Function to generate a random integer within a specified range
 generate_random_int() {
     local min=$1
