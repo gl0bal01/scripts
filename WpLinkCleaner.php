@@ -1,5 +1,8 @@
 <?php
+// gl0bal01 - WordPress Link Cleaner Script
+// ----------------------------------------
 // Take care with caution! I will not be responsible for any data loss or damage.
+
 // Ensure script is run from the command line
 if (php_sapi_name() !== 'cli') {
     die("This script must be run from the command line.");
