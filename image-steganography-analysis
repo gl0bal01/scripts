@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""
+Image Steganography Analysis Tool
+--------------------------------
+Analyzes images for hidden data using steganographic techniques like LSB/MSB extraction
+and ASCII conversion across RGB channels.
+
+- gl0bal01
+"""
+
+import argparse
+import logging
+from pathlib import Path
+from typing import List, Optional
+
+import numpy as np
+from PIL import Image
+
+class StegoAnalyzer:
+    """Analyzes images for steganographically hidden data."""
+    
+    def __init__(self, verbose: bool = False):
+        """Initialize the analyzer with logging configuration."""
+        self._setup_logging(verbose)
+        
+    def _setup_logging(self, verbose: bool) -> None:
+        """Configure logging settings."""
+        level = logging.DEBUG if verbose else logging.INFO
+        logging.basicConfig(
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            level=level
+        )
+        self.logger = logging.getLogger(__name__)
+
+    def _binary_to_ascii(self, binary_text: str) -> str:
+        """Convert binary string to ASCII characters."""
+        ascii_text = ''
+        bytes_list = [binary_text[i:i+8] for i in range(0, len(binary_text), 8)]
+        
+        for byte in bytes_list:
+            if len(byte) != 8:
+                continue
+            try:
+                char = chr(int(byte, 2))
+                if char.isprintable():
+                    ascii_text += char
+            except ValueError:
+                continue
+                
+        return ascii_text
+
+    def _process_channel(self, channel: np.ndarray) -> dict:
+        """Process a single color channel for hidden data."""
+        results = {}
+        
+        # Row-wise ASCII
+        text_row = ''.join(
+            chr(value) for row in channel for value in row 
+            if value > 0 and chr(value).isprintable()
+        )
+        if text_row and any(c.isalnum() for c in text_row):
+            results['row_ascii'] = text_row
+
+        # Column-wise ASCII
+        text_col = ''.join(
+            chr(value) for col in channel.T for value in col
+            if value > 0 and chr(value).isprintable()
+        )
+        if text_col and any(c.isalnum() for c in text_col):
+            results['col_ascii'] = text_col
+
+        # LSB extraction
+        lsb_text = ''.join(str(value & 1) for row in channel for value in row)
+        lsb_ascii = self._binary_to_ascii(lsb_text)
+        if lsb_ascii and any(c.isalnum() for c in lsb_ascii):
+            results['lsb_ascii'] = lsb_ascii
+
+        # MSB extraction
+        msb_text = ''.join(str((value >> 7) & 1) for row in channel for value in row)
+        msb_ascii = self._binary_to_ascii(msb_text)
+        if msb_ascii and any(c.isalnum() for c in msb_ascii):
+            results['msb_ascii'] = msb_ascii
+
+        return results
+
+    def analyze_image(self, image_path: Path) -> Optional[dict]:
+        """Analyze a single image file for hidden data."""
+        try:
+            img = Image.open(image_path).convert('RGB')
+            img_array = np.array(img)
+            
+            results = {}
+            for idx, color in enumerate(['red', 'green', 'blue']):
+                channel_results = self._process_channel(img_array[:, :, idx])
+                if channel_results:  # Only add channels with content
+                    results[color] = channel_results
+                    
+            return results if results else None
+            
+        except Exception as e:
+            self.logger.error(f"Error processing {image_path}: {str(e)}")
+            return None
+
+    def analyze_files(self, file_paths: List[Path]) -> None:
+        """Analyze multiple image files for hidden data."""
+        for file_path in file_paths:
+            self.logger.info(f"\nAnalyzing file: {file_path}")
+            results = self.analyze_image(file_path)
+            
+            if not results:
+                self.logger.info("No hidden data found.")
+                continue
+                
+            for channel, data in results.items():
+                print(f"\n{channel.capitalize()} Channel:")
+                for method, text in data.items():
+                    print(f"{method}: {text}")
+
+def main():
+    """Entry point for the steganography analysis tool."""
+    parser = argparse.ArgumentParser(
+        description="Analyze images for steganographically hidden data"
+    )
+    parser.add_argument(
+        'files',
+        type=Path,
+        nargs='+',
+        help="Image files to analyze"
+    )
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        action='store_true',
+        help="Enable verbose logging"
+    )
+    args = parser.parse_args()
+
+    # Validate files exist
+    valid_files = [f for f in args.files if f.is_file()]
+    if not valid_files:
+        logging.error("No valid files found!")
+        return 1
+
+    analyzer = StegoAnalyzer(verbose=args.verbose)
+    analyzer.analyze_files(valid_files)
+    return 0
+
+if __name__ == "__main__":
+    exit(main())
